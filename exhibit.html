@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>부산 피란수도 — 기록과 흔적</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+<link href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+    --series-1: #2a78d6; /* Person / 부산 */
+    --series-2: #eb6834; /* Group / 국제시장 */
+    --series-3: #1baf7a; /* Place / 부산항 */
+    --series-4: #eda100; /* Event */
+    --series-5: #e87ba4; /* Work */
+    --series-6: #008300; /* Organization */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --border:         rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --border:         rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+  }
+  h1, h2, h3 { font-family: "Noto Serif KR", serif; font-weight: 600; margin: 0; }
+
+  /* ---------- nav ---------- */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    padding: 16px 40px;
+    background: color-mix(in srgb, var(--page-plane) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topnav .brand {
+    font-family: "Noto Serif KR", serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin-right: auto;
+    letter-spacing: 0.02em;
+  }
+  .topnav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .topnav a:hover { color: var(--text-primary); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 120px 40px 90px;
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .hero .kicker {
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-bottom: 22px;
+  }
+  .hero .period {
+    font-size: 15px;
+    color: var(--series-1);
+    font-weight: 500;
+    margin-bottom: 22px;
+    letter-spacing: 0.04em;
+  }
+  .hero p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ---------- sections ---------- */
+  section.panel {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 80px 40px;
+    border-top: 1px solid var(--border);
+  }
+  .panel-head { margin-bottom: 28px; }
+  .panel-head .kicker {
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--series-1);
+    margin-bottom: 10px;
+  }
+  .panel-head h2 { font-size: 26px; margin-bottom: 8px; }
+  .panel-head p { color: var(--text-secondary); font-size: 14px; max-width: 620px; }
+
+  .surface {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  #map { height: 520px; }
+  #timeline { height: auto; }
+  .network-layout { display: flex; gap: 16px; align-items: flex-start; padding: 16px; }
+  #network { flex: 1; height: 560px; border-radius: 6px; }
+  .legend {
+    width: 150px;
+    flex-shrink: 0;
+    font-size: 13px;
+    padding-top: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .legend-swatch { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--text-secondary); }
+
+  footer {
+    text-align: center;
+    padding: 48px 40px 64px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  /* vis-timeline theming */
+  .vis-timeline { border: none; color: var(--text-primary); font-family: inherit; }
+  .vis-panel.vis-center, .vis-panel.vis-left, .vis-panel.vis-right,
+  .vis-panel.vis-top, .vis-panel.vis-bottom { border-color: var(--gridline); }
+  .vis-labelset .vis-label { border-color: var(--gridline); color: var(--text-secondary); }
+  .vis-time-axis .vis-text { color: var(--text-muted); font-size: 12px; }
+  .vis-time-axis .vis-grid.vis-minor,
+  .vis-time-axis .vis-grid.vis-major { border-color: var(--gridline); }
+  .vis-item { border-width: 2px; }
+  .vis-item .vis-item-content { font-size: 13px; padding: 4px 8px; }
+  .vis-tooltip {
+    background: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+    max-width: 280px;
+    white-space: normal !important;
+  }
+  .vis-item.place-부산 { background: color-mix(in srgb, var(--series-1) 18%, transparent); border-color: var(--series-1); }
+  .vis-item.place-국제시장 { background: color-mix(in srgb, var(--series-2) 18%, transparent); border-color: var(--series-2); }
+  .vis-item.place-부산항 { background: color-mix(in srgb, var(--series-3) 18%, transparent); border-color: var(--series-3); }
+
+  /* leaflet popup theming */
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--surface-1);
+    color: var(--text-primary);
+  }
+  .leaflet-popup-content { font-family: inherit; font-size: 13px; }
+  .leaflet-popup-content b { font-family: "Noto Serif KR", serif; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">피란수도 부산</span>
+  <a href="#map">지도</a>
+  <a href="#timeline">연표</a>
+  <a href="#network">관계망</a>
+</nav>
+
+<header class="hero">
+  <div class="kicker">Digital Exhibition</div>
+  <h1>부산, 전쟁 속의 임시수도</h1>
+  <div class="period">1950 — 1953</div>
+  <p>
+    한국전쟁의 격동 속에서 부산은 대한민국의 임시수도가 되어 피란민과 정부,
+    예술가들이 모여든 도시였습니다. 이 페이지는 그 시기의 장소와 사건, 그리고
+    사람들 사이의 관계를 지도·연표·관계망 세 가지 시각으로 살펴봅니다.
+  </p>
+</header>
+
+<section class="panel" id="map">
+  <div class="panel-head">
+    <div class="kicker">Map</div>
+    <h2>피란수도의 장소들</h2>
+    <p>정부 청사에서 피란민 정착촌까지, 당시의 흔적이 남은 15곳의 위치입니다. 표식을 클릭하면 설명이 표시됩니다.</p>
+  </div>
+  <div class="surface"><div id="map"></div></div>
+</section>
+
+<section class="panel" id="timeline">
+  <div class="panel-head">
+    <div class="kicker">Timeline</div>
+    <h2>주요 사건 연표</h2>
+    <p>1950년 정부 이전부터 1953년 환도까지, 장소별로 구분된 8개의 주요 사건입니다.</p>
+  </div>
+  <div class="surface"><div id="timeline"></div></div>
+</section>
+
+<section class="panel" id="network">
+  <div class="panel-head">
+    <div class="kicker">Network</div>
+    <h2>인물·장소·사건의 관계망</h2>
+    <p>이중섭, 김동리 등 피란 예술가와 정부·장소·사건이 어떻게 얽혀 있는지 보여줍니다. 점을 드래그하거나 확대해 탐색해 보세요.</p>
+  </div>
+  <div class="surface">
+    <div class="network-layout">
+      <div id="network"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+</section>
+
+<footer>부산 피란수도 디지털 전시 · events.csv · places.csv · nodes.csv · edges.csv</footer>
+
+<script>
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* ---------------- Map ---------------- */
+  const places = [
+    { id: "p1", name: "부산", lat: 35.1000, lng: 129.0350, type: "도시", desc: "한국전쟁기 임시수도가 된 항구도시" },
+    { id: "p2", name: "영도", lat: 35.0912, lng: 129.0679, type: "섬", desc: "피란 예술가와 피란민이 머문 섬" },
+    { id: "p3", name: "국제시장", lat: 35.0985, lng: 129.0286, type: "시장", desc: "피란민 상권의 중심이자 1953년 대화재가 난 곳" },
+    { id: "p4", name: "40계단", lat: 35.1078, lng: 129.0357, type: "장소", desc: "피란민이 모이고 이산가족이 만나던 계단" },
+    { id: "p5", name: "부산항", lat: 35.0966, lng: 129.0420, type: "항구", desc: "구호물자와 피란민이 오가던 관문" },
+    { id: "p6", name: "자갈치시장", lat: 35.0965, lng: 129.0305, type: "시장", desc: "피란기에 형성된 수산물 시장" },
+    { id: "p7", name: "광복동", lat: 35.0989, lng: 129.0323, type: "거리", desc: "피란 문화예술인이 모이던 번화가" },
+    { id: "p8", name: "밀다원다방", lat: 35.0992, lng: 129.0320, type: "다방", desc: "피란 문인들의 사랑방" },
+    { id: "p9", name: "임시수도정부청사", lat: 35.0995, lng: 129.0240, type: "관청", desc: "임시수도기 정부청사(현 동아대 석당박물관)" },
+    { id: "p10", name: "임시수도대통령관저", lat: 35.0972, lng: 129.0228, type: "관저", desc: "임시수도기 대통령 관저(현 임시수도기념관)" },
+    { id: "p11", name: "보수동책방골목", lat: 35.1016, lng: 129.0270, type: "거리", desc: "피란기 헌책방이 모여 형성된 골목" },
+    { id: "p12", name: "우암동소막마을", lat: 35.1207, lng: 129.0665, type: "마을", desc: "소 막사를 개조해 피란민이 정착한 마을" },
+    { id: "p13", name: "아미동비석마을", lat: 35.0960, lng: 129.0175, type: "마을", desc: "일제기 공동묘지 위에 형성된 피란 정착촌" },
+    { id: "p14", name: "감천문화마을", lat: 35.0975, lng: 129.0107, type: "마을", desc: "산비탈에 형성된 피란 정착 마을" },
+    { id: "p15", name: "원산", lat: 39.1538, lng: 127.4444, type: "도시", desc: "이중섭 등 예술가들의 피란 출발지(현 북한)" }
+  ];
+
+  const map = L.map("map", { scrollWheelZoom: false }).setView([35.10, 129.04], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19
+  }).addTo(map);
+
+  const seriesColor = cssVar("--series-1");
+  places.forEach(p => {
+    const marker = L.circleMarker([p.lat, p.lng], {
+      radius: p.type === "도시" ? 9 : 6,
+      color: seriesColor,
+      fillColor: seriesColor,
+      fillOpacity: 0.75,
+      weight: 2
+    }).addTo(map);
+    marker.bindPopup(`<b>${p.name}</b><br>${p.type}<br>${p.desc}`);
+  });
+
+  /* ---------------- Timeline ---------------- */
+  const events = [
+    { id: "e1", date: "1950-08-18", title: "정부 임시수도 부산 이전", place: "부산", desc: "대한민국 정부가 부산을 임시수도로 정하고 이전" },
+    { id: "e2", date: "1951-01-04", title: "1·4 후퇴", place: "부산", desc: "서울 재함락으로 정부와 피란민이 다시 부산으로 집결" },
+    { id: "e3", date: "1952-05-26", title: "부산정치파동", place: "부산", desc: "대통령 직선제 개헌을 둘러싼 정치적 충돌" },
+    { id: "e4", date: "1952-07-04", title: "발췌개헌", place: "부산", desc: "대통령 직선제를 담은 개헌안 통과" },
+    { id: "e5", date: "1953-01-30", title: "국제시장 대화재", place: "국제시장", desc: "국제시장 일대를 태운 큰불" },
+    { id: "e6", date: "1953-07-27", title: "정전협정 체결", place: "부산", desc: "한국전쟁 정전협정 체결" },
+    { id: "e7", date: "1953-08-15", title: "정부 서울 환도", place: "부산", desc: "임시수도 기능을 마치고 정부가 서울로 환도" },
+    { id: "e8", date: "1953-11-27", title: "부산역전 대화재", place: "부산항", desc: "부산역 앞 일대를 태운 대형 화재" }
+  ];
+
+  const timelineGroups = new vis.DataSet(
+    [...new Set(events.map(e => e.place))].map(place => ({ id: place, content: place }))
+  );
+  const timelineItems = new vis.DataSet(events.map(e => ({
+    id: e.id,
+    group: e.place,
+    content: e.title,
+    start: e.date,
+    className: "place-" + e.place,
+    title: `<strong>${e.title}</strong><br>${e.date} · ${e.place}<br>${e.desc}`
+  })));
+  new vis.Timeline(document.getElementById("timeline"), timelineItems, timelineGroups, {
+    stack: true,
+    zoomKey: "ctrlKey",
+    horizontalScroll: true,
+    verticalScroll: true,
+    margin: { item: 12, axis: 20 },
+    tooltip: { followMouse: false, overflowMethod: "cap" },
+    start: "1950-06-01",
+    end: "1954-03-01"
+  });
+
+  /* ---------------- Network ---------------- */
+  const nodesData = [
+    { id: "per1", label: "이중섭", class: "Person" },
+    { id: "per2", label: "김환기", class: "Person" },
+    { id: "per3", label: "윤이상", class: "Person" },
+    { id: "per4", label: "김동리", class: "Person" },
+    { id: "per5", label: "이승만", class: "Person" },
+    { id: "grp1", label: "피란민", class: "Group" },
+    { id: "p1", label: "부산", class: "Place" },
+    { id: "p2", label: "영도", class: "Place" },
+    { id: "p3", label: "국제시장", class: "Place" },
+    { id: "p4", label: "40계단", class: "Place" },
+    { id: "p5", label: "부산항", class: "Place" },
+    { id: "p7", label: "광복동", class: "Place" },
+    { id: "p8", label: "밀다원다방", class: "Place" },
+    { id: "p9", label: "임시수도정부청사", class: "Place" },
+    { id: "p10", label: "임시수도대통령관저", class: "Place" },
+    { id: "p11", label: "보수동책방골목", class: "Place" },
+    { id: "p12", label: "우암동소막마을", class: "Place" },
+    { id: "p13", label: "아미동비석마을", class: "Place" },
+    { id: "p14", label: "감천문화마을", class: "Place" },
+    { id: "p15", label: "원산", class: "Place" },
+    { id: "e1", label: "정부 임시수도 부산 이전", class: "Event" },
+    { id: "e3", label: "부산정치파동", class: "Event" },
+    { id: "e4", label: "발췌개헌", class: "Event" },
+    { id: "e5", label: "국제시장 대화재", class: "Event" },
+    { id: "e8", label: "부산역전 대화재", class: "Event" },
+    { id: "w1", label: "은지화", class: "Work" },
+    { id: "w2", label: "밀다원시대", class: "Work" },
+    { id: "org1", label: "대한민국정부", class: "Organization" },
+    { id: "org2", label: "헌책방", class: "Organization" }
+  ];
+
+  const edgesData = [
+    { source: "per1", target: "p15", relation: "피란출발" },
+    { source: "per1", target: "p2", relation: "머묾" },
+    { source: "per1", target: "w1", relation: "창작" },
+    { source: "w1", target: "p2", relation: "제작장소" },
+    { source: "per2", target: "p1", relation: "피란" },
+    { source: "per2", target: "p7", relation: "활동" },
+    { source: "per3", target: "p1", relation: "활동" },
+    { source: "per4", target: "p8", relation: "드나듦" },
+    { source: "per4", target: "w2", relation: "집필" },
+    { source: "w2", target: "p7", relation: "배경" },
+    { source: "p8", target: "p7", relation: "위치" },
+    { source: "org1", target: "p1", relation: "이전" },
+    { source: "org1", target: "p9", relation: "청사사용" },
+    { source: "per5", target: "p10", relation: "거주" },
+    { source: "per5", target: "e3", relation: "관여" },
+    { source: "e4", target: "e3", relation: "일부" },
+    { source: "e1", target: "p1", relation: "발생" },
+    { source: "e5", target: "p3", relation: "발생" },
+    { source: "e8", target: "p5", relation: "발생" },
+    { source: "grp1", target: "p3", relation: "집결" },
+    { source: "grp1", target: "p4", relation: "집결" },
+    { source: "grp1", target: "p5", relation: "집결" },
+    { source: "grp1", target: "p12", relation: "정착" },
+    { source: "grp1", target: "p13", relation: "정착" },
+    { source: "grp1", target: "p14", relation: "정착" },
+    { source: "org2", target: "p11", relation: "형성" }
+  ];
+
+  const classOrder = ["Person", "Group", "Place", "Event", "Work", "Organization"];
+  const classLabel = { Person: "인물", Group: "집단", Place: "장소", Event: "사건", Work: "작품", Organization: "단체" };
+  const classVar = { Person: "--series-1", Group: "--series-2", Place: "--series-3", Event: "--series-4", Work: "--series-5", Organization: "--series-6" };
+  function colorFor(cls) { return cssVar(classVar[cls]); }
+
+  const networkNodes = new vis.DataSet(nodesData.map(n => ({
+    id: n.id,
+    label: n.label,
+    title: `${n.label} · ${classLabel[n.class]}`,
+    color: {
+      background: colorFor(n.class),
+      border: colorFor(n.class),
+      highlight: { background: colorFor(n.class), border: cssVar("--text-primary") }
+    },
+    font: { color: cssVar("--text-primary"), size: 13 },
+    shape: "dot",
+    size: n.class === "Place" ? 14 : 10
+  })));
+
+  const networkEdges = new vis.DataSet(edgesData.map((e, i) => ({
+    id: i,
+    from: e.source,
+    to: e.target,
+    label: e.relation,
+    title: e.relation,
+    arrows: "to",
+    color: { color: cssVar("--gridline"), highlight: cssVar("--text-secondary") },
+    font: { color: cssVar("--text-muted"), size: 10, strokeWidth: 0, align: "middle" },
+    smooth: { type: "continuous" }
+  })));
+
+  new vis.Network(document.getElementById("network"), { nodes: networkNodes, edges: networkEdges }, {
+    nodes: { borderWidth: 2 },
+    edges: { width: 1.5 },
+    physics: { stabilization: true, barnesHut: { gravitationalConstant: -3000, springLength: 120 } },
+    interaction: { hover: true, tooltipDelay: 100 }
+  });
+
+  document.getElementById("legend").innerHTML = classOrder.map(cls =>
+    `<div class="legend-item">
+       <span class="legend-swatch" style="background:${colorFor(cls)}"></span>
+       <span class="legend-label">${classLabel[cls]}</span>
+     </div>`
+  ).join("");
+</script>
+</body>
+</html>
