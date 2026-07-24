@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>부산 영화 관계망</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root {
+    --bg: #141414;
+    --surface: #1c1c1c;
+    --surface-2: #262626;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-muted: #737373;
+    --border: rgba(255,255,255,0.14);
+    --red: #e50914;
+    --green: #46d369;
+    --gold: #f5c518;
+    --purple: #b568e0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; color: var(--text-primary); }
+
+  #network { position: absolute; inset: 0; }
+
+  .panel {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    width: 260px;
+    background: rgba(20,20,20,0.92);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    backdrop-filter: blur(6px);
+  }
+  .panel h1 { font-size: 16px; font-weight: 700; margin: 0 0 2px; letter-spacing: -0.2px; }
+  .panel h1 span { color: var(--red); }
+  .panel .subtitle { font-size: 11.5px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.4; }
+
+  .legend-group { margin-bottom: 14px; }
+  .legend-group:last-child { margin-bottom: 0; }
+  .legend-title {
+    font-size: 11px; font-weight: 700; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin-bottom: 6px; }
+  .legend-item:last-child { margin-bottom: 0; }
+  .legend-item .desc { color: var(--text-muted); font-size: 11px; margin-left: auto; }
+  .swatch-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .swatch-line { width: 16px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--border);
+  }
+  .toggle-row:first-of-type { border-top: 1px solid var(--border); }
+  .toggle-label { font-size: 12.5px; color: var(--text-primary); }
+  .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; cursor: pointer; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; transition: background .15s; }
+  .slider::before { content: ""; position: absolute; height: 14px; width: 14px; left: 2px; top: 2px; background: var(--text-secondary); border-radius: 50%; transition: transform .15s, background .15s; }
+  .switch input:checked + .slider { background: var(--red); border-color: var(--red); }
+  .switch input:checked + .slider::before { transform: translateX(16px); background: #fff; }
+
+  .stats {
+    position: absolute; bottom: 16px; left: 16px; z-index: 10;
+    font-size: 11px; color: var(--text-muted);
+    background: rgba(20,20,20,0.85); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px;
+  }
+
+  .vis-tooltip {
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+</style>
+</head>
+<body>
+<div id="network"></div>
+
+<div class="panel">
+  <h1>부산 <span>영화</span> 관계망</h1>
+  <p class="subtitle">nodes.csv / edges.csv · 노드 크기는 연결 수(degree)에 비례</p>
+
+  <div class="legend-group">
+    <div class="legend-title">노드 (class)</div>
+    <div class="legend-item"><span class="swatch-dot" style="background:var(--red)"></span>Movie<span class="desc">162</span></div>
+    <div class="legend-item"><span class="swatch-dot" style="background:var(--green)"></span>Place<span class="desc">509</span></div>
+    <div class="legend-item"><span class="swatch-dot" style="background:var(--purple)"></span>Person<span class="desc">321</span></div>
+    <div class="legend-item"><span class="swatch-dot" style="background:var(--gold)"></span>Event<span class="desc">162</span></div>
+  </div>
+
+  <div class="legend-group">
+    <div class="legend-title">엣지 (relation)</div>
+    <div class="legend-item"><span class="swatch-line" style="background:var(--green)"></span>촬영장소</div>
+    <div class="legend-item"><span class="swatch-line" style="background:var(--purple)"></span>출연</div>
+    <div class="legend-item"><span class="swatch-line" style="background:var(--gold)"></span>개봉</div>
+  </div>
+
+  <div class="toggle-row">
+    <span class="toggle-label">출연진(Person) 표시</span>
+    <label class="switch">
+      <input type="checkbox" id="togglePerson">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">개봉 이벤트(Event) 표시</span>
+    <label class="switch">
+      <input type="checkbox" id="toggleEvent">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<script>
+  const CLASS_COLOR = { Movie: "#e50914", Place: "#46d369", Person: "#b568e0", Event: "#f5c518" };
+  const RELATION_COLOR = { "촬영장소": "rgba(70,211,105,0.45)", "출연": "rgba(181,104,224,0.45)", "개봉": "rgba(245,197,24,0.45)" };
+  const RELATION_HIGHLIGHT = { "촬영장소": "#46d369", "출연": "#b568e0", "개봉": "#f5c518" };
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+        else field += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === "\r") { /* skip */ }
+        else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+        else field += c;
+      }
+    }
+    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+    const headers = rows[0];
+    return rows.slice(1).filter(r => r.length === headers.length).map(r => {
+      const obj = {};
+      headers.forEach((h, idx) => obj[h] = r[idx]);
+      return obj;
+    });
+  }
+
+  Promise.all([
+    fetch("nodes.csv").then(r => r.text()),
+    fetch("edges.csv").then(r => r.text())
+  ]).then(([nodesText, edgesText]) => {
+    const allNodes = parseCSV(nodesText);
+    const allEdges = parseCSV(edgesText);
+
+    // 전역 degree (필터 상태와 무관하게 전체 연결 수 기준으로 크기 고정)
+    const degree = {};
+    allEdges.forEach(e => {
+      degree[e.source] = (degree[e.source] || 0) + 1;
+      degree[e.target] = (degree[e.target] || 0) + 1;
+    });
+    function sizeFor(id) {
+      const d = degree[id] || 0;
+      return Math.max(8, Math.min(46, 8 + Math.sqrt(d) * 4));
+    }
+
+    const nodesById = {};
+    allNodes.forEach(n => { nodesById[n.id] = n; });
+
+    const container = document.getElementById("network");
+    const network = new vis.Network(container, { nodes: new vis.DataSet([]), edges: new vis.DataSet([]) }, {
+      nodes: { shape: "dot", borderWidth: 1.5, font: { color: "#ffffff", size: 12 } },
+      edges: { width: 1, smooth: { type: "continuous" } },
+      physics: {
+        stabilization: { iterations: 150 },
+        barnesHut: { gravitationalConstant: -4500, springLength: 140, springConstant: 0.03, avoidOverlap: 0.2 }
+      },
+      interaction: { hover: true, tooltipDelay: 100 }
+    });
+
+    function classesVisible() {
+      const cls = new Set(["Movie", "Place"]);
+      if (document.getElementById("togglePerson").checked) cls.add("Person");
+      if (document.getElementById("toggleEvent").checked) cls.add("Event");
+      return cls;
+    }
+
+    function render() {
+      const cls = classesVisible();
+      const visibleNodes = allNodes.filter(n => cls.has(n.class));
+      const visibleIds = new Set(visibleNodes.map(n => n.id));
+      const visibleEdges = allEdges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
+
+      const nodeDataSet = new vis.DataSet(visibleNodes.map(n => ({
+        id: n.id,
+        label: n.label,
+        title: `${n.label}  ·  ${n.class}  ·  연결 ${degree[n.id] || 0}`,
+        size: sizeFor(n.id),
+        color: {
+          background: CLASS_COLOR[n.class],
+          border: CLASS_COLOR[n.class],
+          highlight: { background: CLASS_COLOR[n.class], border: "#ffffff" }
+        }
+      })));
+
+      const edgeDataSet = new vis.DataSet(visibleEdges.map((e, i) => ({
+        id: i,
+        from: e.source,
+        to: e.target,
+        title: e.relation,
+        color: {
+          color: RELATION_COLOR[e.relation] || "rgba(255,255,255,0.2)",
+          highlight: RELATION_HIGHLIGHT[e.relation] || "#ffffff"
+        }
+      })));
+
+      network.setData({ nodes: nodeDataSet, edges: edgeDataSet });
+      document.getElementById("stats").textContent =
+        `노드 ${visibleNodes.length.toLocaleString()} · 엣지 ${visibleEdges.length.toLocaleString()}`;
+    }
+
+    document.getElementById("togglePerson").addEventListener("change", render);
+    document.getElementById("toggleEvent").addEventListener("change", render);
+
+    render();
+  }).catch(err => {
+    console.error("데이터 로드 실패:", err);
+    alert("nodes.csv / edges.csv를 불러오지 못했습니다. 로컬 서버(예: python -m http.server)로 열어주세요.");
+  });
+</script>
+</body>
+</html>
